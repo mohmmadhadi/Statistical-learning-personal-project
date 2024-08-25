@@ -32,22 +32,13 @@ data_numeric <- unsupervised %>%
 # Convert to data frame
 data_numeric <- as.data.frame(data_numeric)
 
-# Example of creating a feature for Membership Duration (in days)
+# Creating a feature for Membership Duration (in days)
 unsupervised$membership_duration <- as.numeric(Sys.Date() - unsupervised$became_member_on)
 
 # Adding the new feature to the numeric data
 data_numeric$membership_duration <- unsupervised$membership_duration
 
-##############################################################
-# Convert the features of the data: customer.data
-#customer.data <- as.matrix(unsupervised[3:14])
-
-# Set the row names of customer.data
-#row.names(customer.data) <- unsupervised$customer_id
-
-# Scale the customer.data data: data.scaled
-#data.scaled <- scale(customer.data)
-#################################################################
+#Normalizing data
 data_numeric <- scale(data_numeric)
 
 ###Exploratory Data Analysis
