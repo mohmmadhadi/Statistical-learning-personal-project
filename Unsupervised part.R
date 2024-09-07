@@ -169,3 +169,66 @@ ggplot(data_pca, aes(x = PC1, y = PC2, color = cluster)) +
   geom_point() +
   labs(title = "Clustering Visualization with PCA")
 
+
+### PCA for Clustering
+# We already performed PCA: customer.pr
+# Extract the principal components
+pca_data <- customer.pr$x[, 1:6]
+
+### K-Means Clustering with PCA
+## Elbow Method on PCA data
+# Compute K-Means clustering for a range of k
+wss_pca <- sapply(1:10, function(k) {
+  kmeans(pca_data, centers = k, nstart = 25)$tot.withinss
+})
+
+# Plot elbow method to determine optimal k
+plot(1:10, wss_pca, type = "b", xlab = "Number of clusters (k)", ylab = "Within-cluster sum of squares")
+
+# Set number of clusters
+k <- 5
+
+# Apply K-Means clustering on PCA data
+set.seed(123)
+kmeans_result_pca <- kmeans(pca_data, centers = k, nstart = 25)
+
+# Add cluster assignment to PCA data
+data_pca$cluster <- as.factor(kmeans_result_pca$cluster)
+
+### Plot the clusters using the PCA results
+ggplot(data_pca, aes(x = PC2, y = PC1, color = cluster)) +
+  geom_point() +
+  labs(title = "K-Means Clustering Visualization with PCA")
+
+# View clustering result
+table(data_pca$cluster)
+
+
+### Hierarchical Clustering with PCA
+
+# Calculate the Euclidean distances on the PCA data
+pca_dist <- dist(pca_data)
+
+# Create a hierarchical clustering model on the PCA data
+customer_hclust_pca <- hclust(pca_dist, method = 'complete')
+
+# Plot the dendrogram
+plot(customer_hclust_pca, main = "Hierarchical Clustering Dendrogram (PCA)", xlab = "", sub = "", cex = 0.9)
+
+# Optionally, you can cut the tree to form clusters
+# Cut the dendrogram into 6 clusters
+rect.hclust(customer_hclust_pca, k = 6, border = 2:5)
+
+# Add a horizontal cut line at the appropriate height for 6 clusters
+abline(h = 8.5, col = "red", lty = 2)
+
+# Assign cluster memberships
+pca_hclust_clusters <- cutree(customer_hclust_pca, k = 6)
+
+# Add the cluster assignments to the PCA data
+data_pca$hclust_cluster <- as.factor(pca_hclust_clusters)
+
+### Visualization of the clusters using the PCA results
+ggplot(data_pca, aes(x = PC1, y = PC2, color = hclust_cluster)) +
+  geom_point() +
+  labs(title = "Hierarchical Clustering Visualization with PCA")
