@@ -144,13 +144,86 @@ unsupervised <- unsupervised %>%
 unsupervised <- unsupervised[!is.na(unsupervised$income), ]
 
 #save unsupervised dataset
-write.csv(unsupervised, file = "F:/University/Projects/Data Science/Statistical Learning/Maven Project/unsupervised.csv", row.names = FALSE)
+#write.csv(unsupervised, file = "F:/University/Projects/Data Science/Statistical Learning/Maven Project/unsupervised.csv", row.names = FALSE)
 
-# Check for missing values
-sapply(unsupervised, function(x) sum(is.na(x)))
-# Show rows with NA in any column
-rows_with_na <- unsupervised %>%
-  filter(is.na(rate_completed_by_received) | is.na(rate_completed_by_viewed))
+###Supervised Learning Final Dataset
 
-# View the rows
-print(rows_with_na)
+
+#Create separate datasets for offer events
+
+# Offers received
+offers_received <- events %>%
+  filter(event == "offer received") %>%
+  left_join(offers, by = "offer_id") %>%
+  select(customer_id, offer_type) %>%
+  group_by(customer_id, offer_type) %>%
+  summarise(num_received = n()) %>%
+  spread(offer_type, num_received, fill = 0, sep = "_")
+
+# Offers completed
+offers_completed <- events %>%
+  filter(event == "offer completed") %>%
+  left_join(offers, by = "offer_id") %>%
+  select(customer_id, offer_type) %>%
+  group_by(customer_id, offer_type) %>%
+  summarise(num_completed = n()) %>%
+  spread(offer_type, num_completed, fill = 0, sep = "_")
+
+# Merge received and completed data
+customer_offer_interaction <- full_join(offers_received, offers_completed, by = "customer_id", suffix = c("_received", "_completed"))
+
+##No informational offer completed!!
+
+#Filter for customers who received informational offers
+info_offers_received <- events %>%
+  filter(event == "offer received") %>%
+  left_join(offers, by = "offer_id") %>%
+  filter(offer_type == "informational") %>%
+  select(customer_id, time)
+
+#Track offer completions after receiving informational offers
+completions_after_info <- events %>%
+  filter(event == "offer completed") %>%
+  left_join(info_offers_received, by = "customer_id", suffix = c("", "_info")) %>%
+  filter(time > time_info & time <= time_info + 72)
+
+# Count completions after receiving informational offers
+completion_influence_rate <- completions_after_info %>%
+  group_by(customer_id) %>%
+  summarise(num_completions_after_info = n()) %>%
+  mutate(completion_rate_after_info = num_completions_after_info / n_distinct(completions_after_info$offer_id))
+
+# Merge with customer data
+customer_offer_interaction <- customer_offer_interaction %>%
+  left_join(completion_influence_rate, by = "customer_id") %>%
+  mutate(
+    completion_rate_after_info = replace_na(completion_rate_after_info, 0),  # Fill NAs with 0 for customers with no completions
+  )
+
+# Fill NAs in offer completion columns with 0
+customer_offer_interaction <- customer_offer_interaction %>%
+  mutate_at(vars(offer_type_bogo_completed, offer_type_discount_completed), ~replace(., is.na(.), 0))
+
+
+
+
+
+
+#merging tables
+supervised <- customers %>%
+  left_join(customer_events_summary, by = "customer_id") %>%
+  left_join(customer_offer_time_summary, by = "customer_id") %>%
+  left_join(customer_spending_summary, by = "customer_id") %>%
+  left_join(recency_summary, by = "customer_id") %>%
+  left_join(customer_offer_interaction, by = "customer_id")
+
+#replacing NAN values with 0
+supervised <- supervised %>%
+  mutate(across(c(total_spent, num_transactions, avg_spending_per_transaction, rate_completed_by_received, rate_viewed, avg_time_elapsed, num_completions_after_info), ~ replace(., is.na(.), 0)))
+
+#handling null values
+#removing null values
+supervised <- supervised[!is.na(supervised$income), ]
+
+#save supervised dataset
+write.csv(supervised, file = "F:/University/Projects/Data Science/Statistical Learning/Maven Project/supervised.csv", row.names = FALSE)

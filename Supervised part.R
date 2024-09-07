@@ -1,3 +1,29 @@
+# Install the necessary packages
+install.packages("caTools")
+install.packages("xgboost")
+install.packages("caret")
+install.packages("Matrix")
+install.packages("dplyr")
+install.packages("vcd")
+install.packages("ggplot2")
+install.packages("gridExtra")
+
+
+
+# Load necessary libraries
+library(corrplot)
+library(dplyr)
+library(ggplot2)
+library(vcd)  # For Cramér's V
+library(caTools)
+library(xgboost)
+library(caret)
+library(Matrix)
+library(dplyr)
+library(e1071)
+library(ggplot2)
+library(gridExtra)
+
 #Loading Data
 supervised <- read.csv("F:/University/Projects/Data Science/Statistical Learning/Maven Project/supervised.csv")
 
@@ -64,14 +90,7 @@ supervised$preferred_offer_type <- apply(supervised[, c("offer_type_bogo_complet
                                            offer_types[max_index]
                                          })
 ################################
-# Plot the correlation matrix for visualization
-library(corrplot)
 
-# Load necessary libraries
-library(dplyr)
-library(ggplot2)
-install.packages("vcd")
-library(vcd)  # For Cramér's V
 
 # Extract numeric features
 numeric_features <- supervised[, sapply(supervised, is.numeric)]
@@ -131,21 +150,6 @@ supervised$preferred_offer_type <- as.factor(supervised$preferred_offer_type)
 #######################################################################
 #XGBoost
 
-# Install the necessary packages
-install.packages("caTools")
-install.packages("xgboost")
-install.packages("caret")
-install.packages("Matrix")
-install.packages("dplyr")
-
-# Load the libraries
-library(caTools)
-library(xgboost)
-library(caret)
-library(Matrix)
-library(dplyr)
-library(e1071)
-
 # Remove the customer_id as it is not a feature for prediction
 supervised <- supervised %>% select(-customer_id)
 
@@ -204,13 +208,13 @@ y_pred <- as.factor(y_pred)
 y_test <- as.factor(y_test)
 
 # Calculate metrics for all classes
-metrics <- confusionMatrix(y_pred, y_test, mode = "everything")
-print(metrics)
+metrics_1 <- confusionMatrix(y_pred, y_test, mode = "everything")
+print(metrics_1)
 
 # Extract precision, recall, F1-score, and other metrics
-precision <- metrics$byClass[, "Precision"]
-recall <- metrics$byClass[, "Recall"]
-f1_score <- metrics$byClass[, "F1"]
+precision <- metrics_1$byClass[, "Precision"]
+recall <- metrics_1$byClass[, "Recall"]
+f1_score <- metrics_1$byClass[, "F1"]
 
 # Print the metrics
 cat("Precision by Class: ", precision, "\n")
@@ -417,13 +421,13 @@ y_pred_weighted <- as.factor(y_pred_weighted)
 y_test <- as.factor(y_test)
 
 # Calculate metrics for all classes
-metrics_weighted_model <- confusionMatrix(y_pred_weighted, y_test, mode = "everything")
-print(metrics_weighted_model)
+metrics_weighted_model_2 <- confusionMatrix(y_pred_weighted, y_test, mode = "everything")
+print(metrics_weighted_model_2)
 
 # Extract precision, recall, F1-score, and other metrics
-precision <- metrics_weighted_model$byClass[, "Precision"]
-recall <- metrics_weighted_model$byClass[, "Recall"]
-f1_score <- metrics_weighted_model$byClass[, "F1"]
+precision <- metrics_weighted_model_2$byClass[, "Precision"]
+recall <- metrics_weighted_model_2$byClass[, "Recall"]
+f1_score <- metrics_weighted_model_2$byClass[, "F1"]
 
 # Print the metrics
 cat("Precision by Class: ", precision, "\n")
@@ -431,70 +435,56 @@ cat("Recall by Class: ", recall, "\n")
 cat("F1-score by Class: ", f1_score, "\n")
 
 # Print the overall metrics like accuracy, Kappa, etc.
-cat("Overall Accuracy: ", metrics_weighted_model$overall['Accuracy'], "\n")
-cat("Overall Kappa: ", metrics_weighted_model$overall['Kappa'], "\n")
-
-###############################################################
-
-# Install CatBoost package
-install.packages("lightgbm")
-
-# Load necessary libraries
-library(lightgbm)
-library(caret)
-
-# Assuming you have already split the data into train and test sets as mentioned earlier
-# Ensure that 'preferred_offer_type' is a factor
-train_set$preferred_offer_type <- as.factor(train_set$preferred_offer_type)
-test_set$preferred_offer_type <- as.factor(test_set$preferred_offer_type)
-
-# Convert the training data into a LightGBM dataset
-train_lgb <- lgb.Dataset(data = as.matrix(train_set[, -which(names(train_set) == "preferred_offer_type")]),
-                         label = as.numeric(train_set$preferred_offer_type) - 1)
-
-# Convert the test data into a LightGBM dataset for evaluation
-test_lgb <- lgb.Dataset(data = as.matrix(test_set[, -which(names(test_set) == "preferred_offer_type")]),
-                        label = as.numeric(test_set$preferred_offer_type) - 1)
-
-# Define model parameters for LightGBM
-params <- list(
-  objective = "multiclass",        # Since this is a multi-class classification problem
-  num_class = 3,                   # We have 3 classes: bogo, discount, informational
-  metric = "multi_logloss",        # Metric to evaluate multi-class classification
-  boosting = "gbdt",               # Gradient boosting decision trees
-  learning_rate = 0.1,             # Step size for boosting
-  num_leaves = 31,                 # Maximum tree leaves for base learners
-  class_weight = "balanced"        # Balance class weights based on the frequency of each class
-)
-
-# Train the LightGBM model
-model <- lgb.train(params = params,
-                   data = train_lgb,
-                   nrounds = 100,    # Number of boosting rounds
-                   valids = list(test = test_lgb), # For validation during training
-                   early_stopping_rounds = 10)   # Early stopping to avoid overfitting
-
-# Make predictions on the test set
-pred_prob <- predict(model, as.matrix(test_set[, -which(names(test_set) == "preferred_offer_type")]),
-                     num_iteration = model$best_iteration)
-
-# Convert probabilities to class labels (the index with the maximum probability)
-pred_labels <- max.col(pred_prob) - 1  # Convert from 1-based index to 0-based
-
-# Convert test set true labels to numeric for comparison
-true_labels <- as.numeric(test_set$preferred_offer_type) - 1
+cat("Overall Accuracy: ", metrics_weighted_model_2$overall['Accuracy'], "\n")
+cat("Overall Kappa: ", metrics_weighted_model_2$overall['Kappa'], "\n")
 
 
-# Calculate accuracy
-accuracy <- mean(pred_labels == true_labels)
-print(paste("Accuracy:", accuracy))
 
-# Confusion matrix
-conf_matrix <- confusionMatrix(as.factor(pred_labels), as.factor(true_labels))
-print(conf_matrix)
+##########################################
 
-# Precision, recall, and F1-score
-precision <- conf_matrix$byClass["Pos Pred Value"]
-recall <- conf_matrix$byClass["Sensitivity"]
-f1_score <- 2 * (precision * recall) / (precision + recall)
-print(paste("F1 Score:", f1_score))
+
+# Assuming you have confusion matrices from both models (initial and oversampled)
+# Replace 'metrics' and 'metrics_weighted_model' with your actual confusion matrices
+
+# Create confusion matrices
+cm_initial <- as.data.frame(metrics_1$table)
+cm_weighted <- as.data.frame(metrics_weighted_model$table)
+cm_oversampled <- as.data.frame(metrics$table)
+cm_oversampled_weighted <- as.data.frame(metrics_weighted_model_2$table)
+
+# Plot confusion matrix for initial model
+plot_cm_initial <- ggplot(data = cm_initial, aes(x = Prediction, y = Reference)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  labs(title = "Confusion Matrix (Initial Model)", x = "Predicted Class", y = "True Class") +
+  theme_minimal()
+
+# Plot confusion matrix for weighted model
+plot_cm_weighted <- ggplot(data = cm_weighted, aes(x = Prediction, y = Reference)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  labs(title = "Confusion Matrix (Weighted Model)", x = "Predicted Class", y = "True Class") +
+  theme_minimal()
+
+# Plot confusion matrix for oversampled model
+plot_cm_oversampled <- ggplot(data = cm_oversampled, aes(x = Prediction, y = Reference)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  labs(title = "Confusion Matrix (Oversampled Model)", x = "Predicted Class", y = "True Class") +
+  theme_minimal()
+
+# Plot confusion matrix for oversampled and weighted model
+plot_cm_oversampled_weighted <- ggplot(data = cm_oversampled_weighted, aes(x = Prediction, y = Reference)) +
+  geom_tile(aes(fill = Freq), color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  geom_text(aes(label = Freq), vjust = 1) +
+  labs(title = "Confusion Matrix (Oversampled and Weighted Model)", x = "Predicted Class", y = "True Class") +
+  theme_minimal()
+
+# Arrange both confusion matrix plots side by side
+grid.arrange(plot_cm_initial, plot_cm_oversampled,plot_cm_weighted,plot_cm_oversampled_weighted,  ncol = 2)
+
+
